@@ -40,17 +40,7 @@ export function Sidebar() {
                 <span className="text-xl font-bold text-white tracking-tight">JobFit Pro</span>
             </div>
 
-            {/* Credits Card (Up-sell) */}
-            <div className="mx-4 mb-6 p-4 rounded-2xl bg-gradient-to-br from-indigo-600/20 to-purple-600/20 border border-indigo-500/20">
-                <div className="flex items-center gap-2 text-indigo-400 mb-2">
-                    <Zap className="w-4 h-4 fill-current" />
-                    <span className="text-xs font-bold uppercase tracking-wider">Pro Plan</span>
-                </div>
-                <div className="w-full bg-black/40 h-1.5 rounded-full mb-2 overflow-hidden">
-                    <div className="w-[70%] h-full bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full" />
-                </div>
-                <p className="text-[10px] text-slate-400">14/20 Generations used</p>
-            </div>
+
 
             {/* Navigation */}
             <nav className="flex-1 px-4 space-y-2 overflow-y-auto">

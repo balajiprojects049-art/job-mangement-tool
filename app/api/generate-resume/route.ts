@@ -17,6 +17,9 @@ export async function POST(request: NextRequest) {
         console.log("🔄 Parsing form data...");
         const formData = await request.formData();
 
+        const companyName = formData.get("companyName") as string || "JobFit Pro"; // Default fallback
+        const jobTitle = formData.get("jobTitle") as string || "Candidate Application";
+
         const jobDescription = formData.get("jobDescription") as string | null;
         const file = formData.get("resume") as unknown as File | null;
 
@@ -180,10 +183,9 @@ REQUIRED JSON OUTPUT FORMAT:
 
 
 
-        // 🔍 FETCH USER FROM COOKIE
+        // 🔍 FETCH USER & CHECK SUBSCRIPTION
         let userEmail = "Anonymous";
         let userId: string | null = null;
-
         const cookieStore = cookies();
         const sessionUserId = cookieStore.get("user_session")?.value;
 
@@ -191,18 +193,29 @@ REQUIRED JSON OUTPUT FORMAT:
             const user = await prisma.user.findUnique({
                 where: { id: sessionUserId }
             });
+
             if (user) {
                 userEmail = user.email;
                 userId = user.id;
+
+                // 🛑 LIMIT CHCEK
+                const LIMIT = user.plan === "PRO" ? 20 : 5;
+                if (user.creditsUsed >= LIMIT) {
+                    return NextResponse.json(
+                        { error: `You have reached your limit of ${LIMIT} resumes. Please upgrade to Pro.` },
+                        { status: 403 }
+                    );
+                }
             }
         }
 
-        // 📊 SAFE DATABASE LOGGING
+        // 📊 SAFE DATABASE LOGGING & INCREMENT USAGE
         try {
             await prisma.resumeLog.create({
                 data: {
-                    jobTitle: "Candidate Application",
-                    companyName: "JobFit Pro",
+                    id: crypto.randomUUID(),
+                    jobTitle: jobTitle,
+                    companyName: companyName,
                     matchScore: analysis.matchScore || 0,
                     originalName: file.name,
                     userEmail: userEmail,
@@ -210,10 +223,18 @@ REQUIRED JSON OUTPUT FORMAT:
                     status: "SUCCESS"
                 }
             });
-            console.log("✅ Activity logged to database for:", userEmail);
+
+            // Increment Usage
+            if (userId) {
+                await prisma.user.update({
+                    where: { id: userId },
+                    data: { creditsUsed: { increment: 1 } }
+                });
+            }
+
+            console.log("✅ Activity logged & Credits Deducted for:", userEmail);
         } catch (dbError) {
             console.warn("⚠️ Database logging failed (Non-critical):", dbError);
-            // We consciously IGNORE this error to protect the user's experience.
         }
 
         return NextResponse.json({

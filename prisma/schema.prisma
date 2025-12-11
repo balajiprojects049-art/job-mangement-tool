@@ -44,6 +44,12 @@ model User {
   name           String?
   phone          String?
   status         String           @default("PENDING")
+  
+  // Subscription Fields
+  plan                String   @default("FREE") // FREE or PRO
+  creditsUsed         Int      @default(0) // Resumes generated this month
+  subscriptionExpires DateTime? 
+  
   createdAt      DateTime         @default(now())
   LoginHistory   LoginHistory[]
   ResumeLog      ResumeLog[]

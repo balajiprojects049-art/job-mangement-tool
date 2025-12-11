@@ -12,6 +12,9 @@ import {
 
 export default function NewApplicationPage() {
     const [jobDescription, setJobDescription] = useState("");
+    const [companyName, setCompanyName] = useState("");
+    const [jobTitle, setJobTitle] = useState("");
+
     // const [userEmail, setUserEmail] = useState(""); // REMOVED: Auto-detected by backend
     const [file, setFile] = useState<File | null>(null);
     const [isGenerating, setIsGenerating] = useState(false);
@@ -27,7 +30,10 @@ export default function NewApplicationPage() {
     };
 
     const handleGenerate = async () => {
-        if (!file || !jobDescription) return;
+        if (!file || !jobDescription || !companyName || !jobTitle) {
+            setError("Please fill in all fields (Company, Job Title, Description & File)");
+            return;
+        }
 
         setIsGenerating(true);
         setStep(2);
@@ -37,7 +43,8 @@ export default function NewApplicationPage() {
             const formData = new FormData();
             formData.append("resume", file);
             formData.append("jobDescription", jobDescription);
-            // formData.append("userEmail", userEmail); // Removed
+            formData.append("companyName", companyName);
+            formData.append("jobTitle", jobTitle);
 
             const response = await fetch("/api/generate-resume", {
                 method: "POST",
@@ -46,7 +53,7 @@ export default function NewApplicationPage() {
 
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({}));
-                throw new Error(errorData.details || errorData.message || "Failed to generate resume");
+                throw new Error(errorData.error || errorData.details || errorData.message || "Failed to generate resume");
             }
 
             const result = await response.json();
@@ -65,6 +72,7 @@ export default function NewApplicationPage() {
         }
     };
 
+    // ... [handleDownload etc remain same] ...
     const handleDownload = () => {
         if (!generatedFile) return;
 
@@ -89,7 +97,9 @@ export default function NewApplicationPage() {
 
     return (
         <div className="max-w-6xl mx-auto animate-fade-in">
-            {/* Header */}
+            {/* ... [Header & Error remain same] ... */}
+
+            {/* Re-render header to keep context (simplified for replacement) */}
             <div className="mb-8 flex items-center justify-between">
                 <div>
                     <h1 className="text-3xl font-bold text-white mb-2">Create New Application</h1>
@@ -97,7 +107,6 @@ export default function NewApplicationPage() {
                 </div>
             </div>
 
-            {/* Error Alert */}
             {error && (
                 <div className="mb-6 p-4 rounded-xl bg-red-500/10 border border-red-500/20 flex items-start gap-3">
                     <X className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />
@@ -111,11 +120,38 @@ export default function NewApplicationPage() {
                 </div>
             )}
 
+
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 {/* LEFT COLUMN: INPUTS */}
                 <div className="space-y-6">
 
-                    {/* Email Input REMOVED - Auto Detected */}
+                    {/* NEW: Company & Job Title */}
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="p-4 rounded-2xl bg-[#0F1117]/50 border border-white/5 backdrop-blur-xl">
+                            <label className="block text-xs font-semibold text-slate-400 mb-2 uppercase tracking-wider">
+                                Target Company
+                            </label>
+                            <input
+                                type="text"
+                                className="w-full bg-transparent text-white font-medium focus:outline-none placeholder:text-slate-600"
+                                placeholder="e.g. Google"
+                                value={companyName}
+                                onChange={e => setCompanyName(e.target.value)}
+                            />
+                        </div>
+                        <div className="p-4 rounded-2xl bg-[#0F1117]/50 border border-white/5 backdrop-blur-xl">
+                            <label className="block text-xs font-semibold text-slate-400 mb-2 uppercase tracking-wider">
+                                Target Role
+                            </label>
+                            <input
+                                type="text"
+                                className="w-full bg-transparent text-white font-medium focus:outline-none placeholder:text-slate-600"
+                                placeholder="e.g. Frontend Dev"
+                                value={jobTitle}
+                                onChange={e => setJobTitle(e.target.value)}
+                            />
+                        </div>
+                    </div>
 
                     {/* Job Description Input */}
                     <div className="p-6 rounded-2xl bg-[#0F1117]/50 border border-white/5 backdrop-blur-xl">

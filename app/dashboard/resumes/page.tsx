@@ -1,46 +1,21 @@
-"use client";
+import { prisma } from "@/app/lib/prisma";
+import { cookies } from "next/headers";
+import { Download, Eye, Trash2, Calendar, Briefcase, TrendingUp, FileText } from "lucide-react";
+import Link from "next/link";
 
-import { useState } from "react";
-import { Download, Eye, Trash2, Calendar, Briefcase, TrendingUp } from "lucide-react";
+export default async function ResumesPage() {
+    // 1. Fetch User Data
+    const cookieStore = cookies();
+    const sessionId = cookieStore.get("user_session")?.value;
 
-interface Resume {
-    id: string;
-    jobTitle: string;
-    company: string;
-    matchScore: number;
-    createdAt: string;
-    fileName: string;
-}
+    let resumes: any[] = [];
 
-const mockResumes: Resume[] = [
-    {
-        id: "1",
-        jobTitle: "Senior Frontend Developer",
-        company: "Google",
-        matchScore: 94,
-        createdAt: "2024-03-15",
-        fileName: "resume_google_frontend.docx",
-    },
-    {
-        id: "2",
-        jobTitle: "Full Stack Engineer",
-        company: "Meta",
-        matchScore: 88,
-        createdAt: "2024-03-14",
-        fileName: "resume_meta_fullstack.docx",
-    },
-    {
-        id: "3",
-        jobTitle: "React Developer",
-        company: "Amazon",
-        matchScore: 92,
-        createdAt: "2024-03-12",
-        fileName: "resume_amazon_react.docx",
-    },
-];
-
-export default function ResumesPage() {
-    const [resumes] = useState<Resume[]>(mockResumes);
+    if (sessionId) {
+        resumes = await prisma.resumeLog.findMany({
+            where: { userId: sessionId },
+            orderBy: { createdAt: 'desc' },
+        });
+    }
 
     const getScoreColor = (score: number) => {
         if (score >= 90) return "text-green-400 bg-green-500/10 border-green-500/20";
@@ -65,33 +40,6 @@ export default function ResumesPage() {
                 </div>
             </div>
 
-            {/* Stats Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="p-6 bg-white/5 border border-white/10 rounded-2xl backdrop-blur-sm">
-                    <div className="flex items-center justify-between mb-2">
-                        <p className="text-sm text-slate-400">Avg Match Score</p>
-                        <TrendingUp className="w-5 h-5 text-indigo-400" />
-                    </div>
-                    <p className="text-3xl font-bold text-white">91%</p>
-                </div>
-
-                <div className="p-6 bg-white/5 border border-white/10 rounded-2xl backdrop-blur-sm">
-                    <div className="flex items-center justify-between mb-2">
-                        <p className="text-sm text-slate-400">This Month</p>
-                        <Calendar className="w-5 h-5 text-green-400" />
-                    </div>
-                    <p className="text-3xl font-bold text-white">3</p>
-                </div>
-
-                <div className="p-6 bg-white/5 border border-white/10 rounded-2xl backdrop-blur-sm">
-                    <div className="flex items-center justify-between mb-2">
-                        <p className="text-sm text-slate-400">Companies</p>
-                        <Briefcase className="w-5 h-5 text-purple-400" />
-                    </div>
-                    <p className="text-3xl font-bold text-white">3</p>
-                </div>
-            </div>
-
             {/* Resumes Grid */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {resumes.map((resume) => (
@@ -107,7 +55,7 @@ export default function ResumesPage() {
                                 </h3>
                                 <p className="text-sm text-slate-400 flex items-center gap-2">
                                     <Briefcase className="w-4 h-4" />
-                                    {resume.company}
+                                    {resume.companyName}
                                 </p>
                             </div>
                             <div
@@ -129,11 +77,12 @@ export default function ResumesPage() {
                                     year: "numeric",
                                 })}</span>
                             </div>
+                            <p className="text-xs text-slate-600 mt-2 truncate">File: {resume.originalName}</p>
                         </div>
 
-                        {/* Actions */}
+                        {/* Actions (Placeholders for now) */}
                         <div className="flex items-center gap-3">
-                            <button className="flex-1 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium rounded-xl transition-all flex items-center justify-center gap-2">
+                            <button disabled className="flex-1 px-4 py-2.5 bg-indigo-600/50 text-white/50 text-sm font-medium rounded-xl flex items-center justify-center gap-2 cursor-not-allowed" title="Storage Not Implemented">
                                 <Download className="w-4 h-4" />
                                 Download
                             </button>
@@ -148,7 +97,7 @@ export default function ResumesPage() {
                 ))}
             </div>
 
-            {/* Empty State (if no resumes) */}
+            {/* Empty State */}
             {resumes.length === 0 && (
                 <div className="py-20 text-center">
                     <div className="inline-flex items-center justify-center w-16 h-16 bg-white/5 border border-white/10 rounded-full mb-4">
@@ -156,12 +105,12 @@ export default function ResumesPage() {
                     </div>
                     <h3 className="text-xl font-semibold text-white mb-2">No resumes yet</h3>
                     <p className="text-slate-400 mb-6">Create your first tailored resume to get started</p>
-                    <a
+                    <Link
                         href="/dashboard/new"
                         className="inline-flex items-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-xl transition-all"
                     >
                         Create Resume
-                    </a>
+                    </Link>
                 </div>
             )}
         </div>
