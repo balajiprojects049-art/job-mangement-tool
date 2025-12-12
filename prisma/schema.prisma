@@ -25,6 +25,7 @@ model ResumeLog {
   userEmail    String?
   userId       String?
   status       String   @default("SUCCESS")
+  isFavorite   Boolean  @default(false)
   user         User?    @relation(fields: [userId], references: [id])
 }
 
@@ -50,8 +51,25 @@ model User {
   creditsUsed         Int      @default(0) // Resumes generated this month
   subscriptionExpires DateTime? 
   
+  // Daily Resume Limit
+  dailyResumeCount Int      @default(0) // Resumes generated today
+  dailyResumeLimit Int      @default(70) // Max resumes per day
+  lastResumeDate   DateTime? // Last resume generation date
+  
   createdAt      DateTime         @default(now())
   LoginHistory   LoginHistory[]
   ResumeLog      ResumeLog[]
   SystemActivity SystemActivity[]
+  Feedback       Feedback[]
+}
+
+model Feedback {
+  id        String   @id @default(cuid())
+  userId    String
+  rating    Int      // 1-5 stars
+  category  String   // Bug, Feature, General, etc.
+  message   String
+  status    String   @default("PENDING") // PENDING, REVIEWED, RESOLVED
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
 }

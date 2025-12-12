@@ -14,7 +14,8 @@ import {
     Briefcase,
     User,
     Sun,
-    Moon
+    Moon,
+    MessageSquare
 } from "lucide-react";
 
 interface SidebarClientProps {
@@ -41,6 +42,7 @@ export function SidebarClient({ user }: SidebarClientProps) {
         { name: "My Resumes", icon: FileText, href: "/dashboard/resumes" },
         { name: "Job Tracker", icon: Briefcase, href: "/dashboard/tracker" },
         { name: "History", icon: History, href: "/dashboard/history" },
+        { name: "Feedback", icon: MessageSquare, href: "/dashboard/feedback" },
         { name: "Settings", icon: Settings, href: "/dashboard/settings" },
     ];
 

@@ -1,5 +1,5 @@
 import { prisma } from "@/app/lib/prisma";
-import { FileText, Users, BarChart3, CheckCircle, XCircle, LogOut, Sun, Moon } from "lucide-react";
+import { FileText, Users, BarChart3, CheckCircle, XCircle, LogOut, Sun, Moon, MessageSquare, Star } from "lucide-react";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import UserActions from "./UserActions";
@@ -39,10 +39,11 @@ export default async function AdminDashboard() {
         take: 50
     });
 
-    // 4. Fetch Login History
-    const logins = await prisma.loginHistory.findMany({
+    // 4. Fetch User Feedback
+    const totalFeedback = await prisma.feedback.count();
+    const feedbackList = await prisma.feedback.findMany({
         include: { user: true },
-        orderBy: { loginAt: 'desc' },
+        orderBy: { createdAt: 'desc' },
         take: 20
     });
 
@@ -80,7 +81,7 @@ export default async function AdminDashboard() {
                 </div>
 
                 {/* Stats Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                     {/* Stat 1 */}
                     <div className="card p-6 card-hover">
                         <div className="flex items-center gap-4 mb-4">
@@ -112,7 +113,17 @@ export default async function AdminDashboard() {
                             <h3 className="text-muted-foreground font-semibold">Registered Users</h3>
                         </div>
                         <p className="text-5xl font-bold text-foreground">{totalUsers}</p>
-                        <p className="text-xs text-muted-foreground mt-2">Total Verified Clients</p>
+                    </div>
+
+                    {/* Stat 4 - Feedback */}
+                    <div className="card p-6 card-hover">
+                        <div className="flex items-center gap-4 mb-4">
+                            <div className="w-14 h-14 bg-yellow-500/20 dark:bg-yellow-500/10 rounded-xl flex items-center justify-center text-yellow-600 dark:text-yellow-400">
+                                <MessageSquare className="w-7 h-7" />
+                            </div>
+                            <h3 className="text-muted-foreground font-semibold">User Feedback</h3>
+                        </div>
+                        <p className="text-5xl font-bold text-foreground">{totalFeedback}</p>
                     </div>
                 </div>
 
@@ -135,12 +146,13 @@ export default async function AdminDashboard() {
                                         <th>Joined Date</th>
                                         <th>Name</th>
                                         <th>Email</th>
+                                        <th>Daily Usage</th>
                                         <th>Action</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {users.length === 0 ? (
-                                        <tr><td colSpan={4} className="text-center text-muted-foreground py-12">No users registered yet.</td></tr>
+                                        <tr><td colSpan={5} className="text-center text-muted-foreground py-12">No users registered yet.</td></tr>
                                     ) : users.map(user => (
                                         <tr key={user.id}>
                                             <td className="text-muted-foreground font-medium">{new Date(user.createdAt).toLocaleDateString()}</td>
@@ -149,6 +161,18 @@ export default async function AdminDashboard() {
                                                 <span className="text-xs font-normal text-muted-foreground">{user.phone}</span>
                                             </td>
                                             <td className="text-primary font-medium">{user.email}</td>
+                                            <td>
+                                                <div className="flex items-center gap-2">
+                                                    <span className={`font-bold ${(user as any).dailyResumeCount >= (user as any).dailyResumeLimit ? 'text-red-600 dark:text-red-400' : 'text-foreground'}`}>
+                                                        {(user as any).dailyResumeCount || 0}
+                                                    </span>
+                                                    <span className="text-muted-foreground">/</span>
+                                                    <span className="text-muted-foreground font-medium">
+                                                        {(user as any).dailyResumeLimit || 70}
+                                                    </span>
+                                                </div>
+                                                <span className="text-xs text-muted-foreground">resumes today</span>
+                                            </td>
                                             <td>
                                                 <UserActions userId={user.id} status={user.status} />
                                             </td>
@@ -222,32 +246,64 @@ export default async function AdminDashboard() {
                         </div>
                     </div>
 
-                    {/* SECTION 3: RECENT LOGINS */}
-                    <div className="card overflow-hidden">
-                        <div className="p-6 border-b border-border flex justify-between items-center bg-muted/30">
-                            <h2 className="text-2xl font-bold text-foreground flex items-center gap-2">
-                                <span className="text-2xl">🔐</span>
-                                Recent Logins
+                    {/* SECTION 3: USER FEEDBACK */}
+                    <div className="card p-8">
+                        <div className="flex items-center justify-between mb-6">
+                            <h2 className="text-2xl font-bold text-foreground flex items-center gap-3">
+                                <MessageSquare className="w-7 h-7 text-primary" />
+                                User Feedback
                             </h2>
-                            <span className="status-badge info">Access Logs</span>
+                            <span className="status-badge warning">Recent Submissions</span>
                         </div>
                         <div className="overflow-x-auto">
                             <table className="data-table">
                                 <thead>
                                     <tr>
-                                        <th>Login Time</th>
+                                        <th>Date</th>
                                         <th>User</th>
-                                        <th>IP Address</th>
+                                        <th>Rating</th>
+                                        <th>Category</th>
+                                        <th>Message</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {logins.length === 0 ? (
-                                        <tr><td colSpan={3} className="text-center text-muted-foreground py-12">No login history found.</td></tr>
-                                    ) : logins.map(login => (
-                                        <tr key={login.id}>
-                                            <td className="text-muted-foreground font-medium">{new Date(login.loginAt).toLocaleString()}</td>
-                                            <td className="font-semibold">{login.user.email}</td>
-                                            <td className="text-muted-foreground font-mono text-xs">{login.ipAddress || "Unknown"}</td>
+                                    {feedbackList.length === 0 ? (
+                                        <tr><td colSpan={5} className="text-center text-muted-foreground py-12">No feedback received yet.</td></tr>
+                                    ) : feedbackList.map(feedback => (
+                                        <tr key={feedback.id}>
+                                            <td className="text-muted-foreground font-medium">
+                                                {new Date(feedback.createdAt).toLocaleDateString()}
+                                            </td>
+                                            <td className="font-semibold">{feedback.user.email}</td>
+                                            <td>
+                                                <div className="flex items-center gap-1">
+                                                    {Array.from({ length: 5 }).map((_, i) => (
+                                                        <Star
+                                                            key={i}
+                                                            className={`w-4 h-4 ${i < feedback.rating
+                                                                ? "fill-yellow-400 text-yellow-400"
+                                                                : "text-muted-foreground"
+                                                                }`}
+                                                        />
+                                                    ))}
+                                                    <span className="text-xs text-muted-foreground ml-1">({feedback.rating}/5)</span>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <span className={`px-2 py-1 rounded-full text-xs font-semibold ${feedback.category === 'bug'
+                                                    ? 'bg-red-100 dark:bg-red-500/20 text-red-700 dark:text-red-400'
+                                                    : feedback.category === 'feature'
+                                                        ? 'bg-yellow-100 dark:bg-yellow-500/20 text-yellow-700 dark:text-yellow-400'
+                                                        : feedback.category === 'improvement'
+                                                            ? 'bg-blue-100 dark:bg-blue-500/20 text-blue-700 dark:text-blue-400'
+                                                            : 'bg-purple-100 dark:bg-purple-500/20 text-purple-700 dark:text-purple-400'
+                                                    }`}>
+                                                    {feedback.category.charAt(0).toUpperCase() + feedback.category.slice(1)}
+                                                </span>
+                                            </td>
+                                            <td className="text-muted-foreground max-w-md">
+                                                <p className="truncate">{feedback.message}</p>
+                                            </td>
                                         </tr>
                                     ))}
                                 </tbody>
