@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Check, X, Loader2, Gift, Crown } from "lucide-react";
+import { Check, X, Loader2, Gift, Crown, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/components/ToastProvider";
 import { useConfirmDialog } from "@/components/ConfirmDialog";
@@ -68,9 +68,50 @@ export default function UserActions({
         });
     };
 
+    const handleDelete = async () => {
+        showConfirm("Are you sure you want to PERMANENTLY delete this user? This cannot be undone.", async () => {
+            setLoading(true);
+            try {
+                const response = await fetch("/api/admin/delete-user", {
+                    method: "POST",
+                    body: JSON.stringify({ userId }),
+                    headers: { "Content-Type": "application/json" }
+                });
+
+                if (response.ok) {
+                    showToast("User deleted successfully", "success");
+                    router.refresh();
+                } else {
+                    showToast("Failed to delete user", "error");
+                }
+            } catch (e) {
+                showToast("Error deleting user", "error");
+            } finally {
+                setLoading(false);
+            }
+        });
+    };
+
+    // Helper to render the delete button
+    const DeleteButton = () => (
+        <button
+            onClick={handleDelete}
+            disabled={loading}
+            className="p-2 bg-gray-100 dark:bg-gray-800 text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition disabled:opacity-50 border border-transparent hover:border-red-200"
+            title="Delete User"
+        >
+            <Trash2 className="w-4 h-4" />
+        </button>
+    );
+
     // If user is rejected
     if (status === "REJECTED") {
-        return <span className="status-badge error">REJECTED</span>;
+        return (
+            <div className="flex items-center gap-2">
+                <span className="status-badge error">REJECTED</span>
+                <DeleteButton />
+            </div>
+        );
     }
 
     // If user is pending approval
@@ -93,6 +134,8 @@ export default function UserActions({
                 >
                     {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <X className="w-4 h-4" />}
                 </button>
+                <div className="w-px bg-border mx-1"></div>
+                <DeleteButton />
             </div>
         );
     }
@@ -109,7 +152,7 @@ export default function UserActions({
                         title="Grant FREE Plan (5 resumes/month)"
                     >
                         {loading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Gift className="w-3 h-3" />}
-                        <span>FREE Plan</span>
+                        <span>FREE</span>
                     </button>
                     <button
                         onClick={() => handleGrantPlan("PRO")}
@@ -118,8 +161,9 @@ export default function UserActions({
                         title="Grant PRO Plan (Unlimited resumes)"
                     >
                         {loading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Crown className="w-3 h-3" />}
-                        <span>PRO Plan</span>
+                        <span>PRO</span>
                     </button>
+                    <DeleteButton />
                 </div>
                 <span className="text-xs text-muted-foreground">⏳ Awaiting plan assignment</span>
             </div>
@@ -145,31 +189,39 @@ export default function UserActions({
                     )}
                 </div>
 
-                {/* Show Upgrade to PRO button for FREE users */}
-                {isFREE && (
-                    <button
-                        onClick={() => handleGrantPlan("PRO")}
-                        disabled={loading}
-                        className={`flex items-center justify-center gap-1 px-3 py-2 rounded-lg transition disabled:opacity-50 text-xs font-semibold ${limitReached
-                            ? 'bg-gradient-to-r from-yellow-500 to-orange-500 text-white hover:from-yellow-600 hover:to-orange-600 animate-pulse'
-                            : 'bg-yellow-100 dark:bg-yellow-500/20 text-yellow-700 dark:text-yellow-400 hover:bg-yellow-200 dark:hover:bg-yellow-500/30 border border-yellow-200 dark:border-yellow-500/20'
-                            }`}
-                        title="Upgrade user to PRO Plan"
-                    >
-                        {loading ? (
-                            <Loader2 className="w-3 h-3 animate-spin" />
-                        ) : (
-                            <>
-                                <Crown className="w-3 h-3" />
-                                <span>{limitReached ? '🚀 UPGRADE TO PRO' : 'Upgrade to PRO'}</span>
-                            </>
-                        )}
-                    </button>
-                )}
-            </div>
+                <div className="flex gap-2 items-center">
+                    {/* Show Upgrade to PRO button for FREE users */}
+                    {isFREE && (
+                        <button
+                            onClick={() => handleGrantPlan("PRO")}
+                            disabled={loading}
+                            className={`flex items-center justify-center gap-1 px-3 py-2 rounded-lg transition disabled:opacity-50 text-xs font-semibold ${limitReached
+                                ? 'bg-gradient-to-r from-yellow-500 to-orange-500 text-white hover:from-yellow-600 hover:to-orange-600 animate-pulse'
+                                : 'bg-yellow-100 dark:bg-yellow-500/20 text-yellow-700 dark:text-yellow-400 hover:bg-yellow-200 dark:hover:bg-yellow-500/30 border border-yellow-200 dark:border-yellow-500/20'
+                                }`}
+                            title="Upgrade user to PRO Plan"
+                        >
+                            {loading ? (
+                                <Loader2 className="w-3 h-3 animate-spin" />
+                            ) : (
+                                <>
+                                    <Crown className="w-3 h-3" />
+                                    <span>{limitReached ? 'UPGRADE' : 'Upgrade'}</span>
+                                </>
+                            )}
+                        </button>
+                    )}
+                    <DeleteButton />
+                </div>
+            </div >
         );
     }
 
     // Fallback
-    return <span className="status-badge">Unknown Status</span>;
+    return (
+        <div className="flex items-center gap-2">
+            <span className="status-badge">Unknown Status</span>
+            <DeleteButton />
+        </div>
+    );
 }

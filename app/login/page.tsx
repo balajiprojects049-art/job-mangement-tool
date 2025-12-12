@@ -29,7 +29,7 @@ export default function LoginPage() {
 
             if (!res.ok) throw new Error(await res.text());
 
-            router.push("/dashboard/new");
+            router.push("/dashboard");
             router.refresh();
         } catch (err: any) {
             setError(err.message || "Invalid credentials");
