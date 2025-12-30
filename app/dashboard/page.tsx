@@ -48,7 +48,7 @@ export default async function DashboardPage() {
     const userName = user?.name || "User";
     const plan = user?.plan || "FREE";
     const creditsUsed = user?.creditsUsed || 0;
-    const limit = plan === "PRO" ? 70 : 5;
+    const limit = plan === "PRO" ? 1500 : 5;
 
     // Calculate Days Left (Mock: 30 days from creation)
     const daysUsed = Math.floor((new Date().getTime() - new Date(user?.createdAt || Date.now()).getTime()) / (1000 * 60 * 60 * 24));
@@ -101,7 +101,7 @@ export default async function DashboardPage() {
                     maxCredits={limit}
                     daysLeft={daysLeft}
                     dailyUsed={(user as any)?.dailyResumeCount || 0}
-                    dailyLimit={(user as any)?.dailyResumeLimit || 70}
+                    dailyLimit={(user as any)?.dailyResumeLimit || 50}
                 />
             </div>
 

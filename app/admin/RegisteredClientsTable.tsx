@@ -166,13 +166,14 @@ export default function RegisteredClientsTable({ users: initialUsers }: Register
                             <th>Name</th>
                             <th>Email</th>
                             <th>Daily Usage</th>
+                            <th>Monthly Usage</th>
                             <th>Action</th>
                         </tr>
                     </thead>
                     <tbody>
                         {filteredUsers.length === 0 ? (
                             <tr>
-                                <td colSpan={5} className="text-center text-muted-foreground py-12">
+                                <td colSpan={6} className="text-center text-muted-foreground py-12">
                                     {searchQuery ? (
                                         <>
                                             No users found matching "{searchQuery}"
@@ -207,10 +208,22 @@ export default function RegisteredClientsTable({ users: initialUsers }: Register
                                             </span>
                                             <span className="text-muted-foreground">/</span>
                                             <span className="text-muted-foreground font-medium">
-                                                {(user as any).dailyResumeLimit || 70}
+                                                {(user as any).dailyResumeLimit || 50}
                                             </span>
                                         </div>
                                         <span className="text-xs text-muted-foreground">resumes today</span>
+                                    </td>
+                                    <td>
+                                        <div className="flex items-center gap-2">
+                                            <span className={`font-bold ${(user as any).creditsUsed >= ((user as any).plan === "PRO" ? 1500 : 5) ? 'text-red-600 dark:text-red-400' : 'text-foreground'}`}>
+                                                {(user as any).creditsUsed || 0}
+                                            </span>
+                                            <span className="text-muted-foreground">/</span>
+                                            <span className="text-muted-foreground font-medium">
+                                                {(user as any).plan === "PRO" ? 1500 : 5}
+                                            </span>
+                                        </div>
+                                        <span className="text-xs text-muted-foreground">resumes this month</span>
                                     </td>
                                     <td>
                                         <UserActions
