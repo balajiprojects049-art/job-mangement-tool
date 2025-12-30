@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import { useState, useEffect } from "react";
+import { signOut } from "next-auth/react";
 import {
     LayoutDashboard,
     FileText,
@@ -49,8 +50,7 @@ export function SidebarClient({ user }: SidebarClientProps) {
     ];
 
     const handleSignOut = async () => {
-        await fetch("/api/auth/logout", { method: "POST" });
-        router.push("/");
+        await signOut({ callbackUrl: "/login" });
     };
 
     return (

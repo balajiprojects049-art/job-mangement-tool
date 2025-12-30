@@ -1,16 +1,16 @@
+import { getServerSession } from "next-auth";
 import { cookies } from "next/headers";
 import { prisma } from "@/app/lib/prisma";
 import { SidebarClient } from "./SidebarClient";
 
 export async function Sidebar() {
-    const cookieStore = cookies();
-    const sessionId = cookieStore.get("user_session")?.value;
+    const session = await getServerSession();
 
     let user = null;
 
-    if (sessionId) {
+    if (session?.user?.email) {
         const userData = await prisma.user.findUnique({
-            where: { id: sessionId },
+            where: { email: session.user.email },
             select: {
                 name: true,
                 email: true,

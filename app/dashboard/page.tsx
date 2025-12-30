@@ -1,3 +1,4 @@
+import { getServerSession } from "next-auth";
 import Link from "next/link";
 import {
     ArrowUpRight,
@@ -23,16 +24,15 @@ import SubscriptionStats from "./SubscriptionStats";
 import ViewOnlyNotice from "@/components/dashboard/ViewOnlyNotice";
 
 export default async function DashboardPage() {
-    // 1. Fetch Session & User
-    const cookieStore = cookies();
-    const sessionId = cookieStore.get("user_session")?.value;
+    // 1. Fetch Session & User from NextAuth
+    const session = await getServerSession();
 
     let user = null;
     let appsCount = 0;
 
-    if (sessionId) {
+    if (session?.user?.email) {
         user = await prisma.user.findUnique({
-            where: { id: sessionId },
+            where: { email: session.user.email },
             include: { ResumeLog: true }
         });
         if (user) {

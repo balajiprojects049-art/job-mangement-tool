@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test NextAuth</title>
+</head>
+<body>
+    <h1>Testing NextAuth Google Login</h1>
+    <button onclick="testGoogle()">Test Google Login</button>
+    <div id="result"></div>
+
+    <script>
+        async function testGoogle() {
+            console.log("Button clicked!");
+            document.getElementById('result').innerHTML = "Redirecting to NextAuth...";
+            window.location.href = '/api/auth/signin/google?callbackUrl=/dashboard';
+        }
+    </script>
+</body>
+</html>

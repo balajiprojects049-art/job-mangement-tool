@@ -41,7 +41,7 @@ model SystemActivity {
 model User {
   id             String           @id @default(cuid())
   email          String           @unique
-  password       String
+  password       String?
   name           String?
   phone          String?
   profileImage   String? // Profile photo URL or base64
