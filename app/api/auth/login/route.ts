@@ -29,11 +29,13 @@ export async function POST(req: Request) {
             }
         });
 
-        // Set Cookie
+        // Set Cookie with proper attributes for cross-page navigation
         cookies().set("user_session", user.id, {
             httpOnly: true,
             path: "/",
-            maxAge: 86400 // 1 day
+            maxAge: 86400, // 1 day
+            sameSite: "lax", // Important: allows cookie to be sent on same-site navigations
+            secure: process.env.NODE_ENV === "production" // HTTPS only in production
         });
 
         return NextResponse.json({ success: true });
