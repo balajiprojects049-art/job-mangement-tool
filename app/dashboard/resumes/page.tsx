@@ -3,14 +3,14 @@ import { cookies } from "next/headers";
 import { FileText } from "lucide-react";
 import Link from "next/link";
 import { ResumesClient } from "./ResumesClient";
+import { getUserId } from "@/app/lib/auth";
 
 // 🔄 Disable caching - Always fetch fresh resume data
 export const revalidate = 0;
 
 export default async function ResumesPage() {
     // Fetch User Data
-    const cookieStore = cookies();
-    const sessionId = cookieStore.get("user_session")?.value;
+    const sessionId = await getUserId();
 
     let resumes: any[] = [];
 

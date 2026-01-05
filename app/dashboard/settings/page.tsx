@@ -1,12 +1,11 @@
-import { cookies } from "next/headers";
 import { prisma } from "@/app/lib/prisma";
 import SettingsClient from "./SettingsClient";
 import { redirect } from "next/navigation";
+import { getUserId } from "@/app/lib/auth";
 
 export default async function SettingsPage() {
     // Get user ID from session
-    const cookieStore = await cookies();
-    const sessionId = cookieStore.get("user_session")?.value;
+    const sessionId = await getUserId();
 
     if (!sessionId) {
         redirect("/");

@@ -22,20 +22,21 @@ import { cookies } from "next/headers";
 import { prisma } from "../lib/prisma";
 import SubscriptionStats from "./SubscriptionStats";
 import ViewOnlyNotice from "@/components/dashboard/ViewOnlyNotice";
+import { getUserId } from "@/app/lib/auth";
 
 // 🔄 Disable caching for this page - Always fetch fresh data
 export const revalidate = 0;
 
 export default async function DashboardPage() {
-    // 1. Fetch Session & User from NextAuth
-    const session = await getServerSession();
+    // 1. Fetch User ID (supports both Google & Email login)
+    const userId = await getUserId();
 
     let user = null;
     let appsCount = 0;
 
-    if (session?.user?.email) {
+    if (userId) {
         user = await prisma.user.findUnique({
-            where: { email: session.user.email },
+            where: { id: userId },
             include: { ResumeLog: true }
         });
         if (user) {

@@ -1,11 +1,10 @@
-import { cookies } from "next/headers";
 import { prisma } from "@/app/lib/prisma";
 import HistoryClient from "./HistoryClient";
+import { getUserId } from "@/app/lib/auth";
 
 export default async function HistoryPage() {
     // Get user ID from session
-    const cookieStore = await cookies();
-    const sessionId = cookieStore.get("user_session")?.value;
+    const sessionId = await getUserId();
 
     if (!sessionId) {
         return (

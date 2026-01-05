@@ -1,21 +1,21 @@
-import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { PrismaClient } from "@prisma/client";
 import ViewOnlyNotice from "@/components/dashboard/ViewOnlyNotice";
 import NewApplicationClient from "./NewApplicationClient";
+import { getUserId } from "@/app/lib/auth";
 
 const prisma = new PrismaClient();
 
 export default async function NewApplicationPage() {
-    const cookieStore = cookies();
-    const sessionCookie = cookieStore.get("user_session");
+    // Get user ID from EITHER custom session OR NextAuth (Google) session
+    const userId = await getUserId();
 
-    if (!sessionCookie?.value) {
+    // If no session exists, redirect to login
+    if (!userId) {
         redirect("/login");
     }
 
     // Fetch user to check permissions
-    const userId = sessionCookie.value;
     const user = await prisma.user.findUnique({
         where: { id: userId },
         select: { hasFullAccess: true, plan: true }
