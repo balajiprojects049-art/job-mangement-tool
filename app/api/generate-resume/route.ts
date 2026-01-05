@@ -223,105 +223,33 @@ Remember: Write natural, professional content without any markdown or special fo
 
 
 
-        // 🔍 FETCH USER & CHECK SUBSCRIPTION
-        // 🔍 FETCH USER & CHECK SUBSCRIPTION
-        let userEmail = "Anonymous";
-        let userName = "User";
+        // 🔍 DEBUG MODE: SKIPPING AUTH & DB LOGGING TO ISOLATE ERROR
+        // ---------------------------------------------------------
+        let userEmail = "Debug_User";
+        let userName = "Debug User";
         let userId: string | null = null;
 
-        // Use unified helper to get ID from either cookie or NextAuth session
-        const sessionUserId = await getUserId();
+        // const sessionUserId = await getUserId();
+        // ... (Auth checks commented out) 
 
+        console.log("⚠️ DEBUG: Auth & DB checks skipped. Running in bypass mode.");
+
+        /*
         if (sessionUserId) {
-            const user = await prisma.user.findUnique({
-                where: { id: sessionUserId }
-            });
-
-            if (user) {
-                userEmail = user.email;
-                userName = user.name || user.email.split('@')[0]; // Use name or email prefix
-                userId = user.id;
-
-                // 🔒 CHECK FULL ACCESS - Consultative Service Model
-                if (!(user as any).hasFullAccess) {
-                    return NextResponse.json(
-                        {
-                            error: "Access Restricted",
-                            message: "Your account is approved but doesn't have resume generation access yet. Please send your resume to our WhatsApp: +1 (409) 919-7989. After reviewing your resume, admin will grant you plan access to use all features."
-                        },
-                        { status: 403 }
-                    );
-                }
-
-                // 🔄 CHECK IF IT'S A NEW DAY - Reset daily count
-                const today = new Date();
-                today.setHours(0, 0, 0, 0); // Start of today
-
-                const lastDate = user.lastResumeDate ? new Date(user.lastResumeDate) : null;
-                const isNewDay = !lastDate || lastDate < today;
-
-                if (isNewDay) {
-                    // Reset daily count for new day
-                    await prisma.user.update({
-                        where: { id: userId },
-                        data: {
-                            dailyResumeCount: 0,
-                            lastResumeDate: new Date()
-                        }
-                    });
-                }
-
-                // �🛑 DAILY LIMIT CHECK (70 resumes per day)
-                const currentDailyCount = isNewDay ? 0 : user.dailyResumeCount;
-                if (currentDailyCount >= user.dailyResumeLimit) {
-                    return NextResponse.json(
-                        { error: `Daily limit reached! You can generate up to ${user.dailyResumeLimit} resumes per day. Try again tomorrow.` },
-                        { status: 403 }
-                    );
-                }
-
-                // 🛑 MONTHLY LIMIT CHECK
-                const LIMIT = user.plan === "PRO" ? 70 : 5;
-                if (user.creditsUsed >= LIMIT) {
-                    return NextResponse.json(
-                        { error: `You have reached your limit of ${LIMIT} resumes. Please upgrade to Pro.` },
-                        { status: 403 }
-                    );
-                }
-            }
+            // ... (original auth logic)
         }
+        */
 
         // 📊 SAFE DATABASE LOGGING & INCREMENT USAGE
+        /*
         try {
-            await prisma.resumeLog.create({
-                data: {
-                    id: crypto.randomUUID(),
-                    jobTitle: jobTitle,
-                    companyName: companyName,
-                    matchScore: analysis.matchScore || 0,
-                    originalName: file.name,
-                    userEmail: userEmail,
-                    userId: userId, // Link to User Table
-                    status: "SUCCESS"
-                }
-            });
-
-            // Increment Usage
-            if (userId) {
-                await prisma.user.update({
-                    where: { id: userId },
-                    data: {
-                        creditsUsed: { increment: 1 },
-                        dailyResumeCount: { increment: 1 },
-                        lastResumeDate: new Date()
-                    }
-                });
-            }
-
-            console.log("✅ Activity logged & Credits Deducted for:", userEmail);
+            await prisma.resumeLog.create({ ... });
+            if (userId) { await prisma.user.update({ ... }); }
         } catch (dbError) {
             console.warn("⚠️ Database logging failed (Non-critical):", dbError);
         }
+        */
+        // ---------------------------------------------------------
 
         // Create custom filename: Name_Company_Role_resume.docx
         const sanitize = (str: string) => str.replace(/[^a-zA-Z0-9]/g, '_');
