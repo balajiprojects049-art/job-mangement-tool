@@ -138,103 +138,7 @@ REQUIRED JSON OUTPUT FORMAT:
 
 Remember: Write natural, professional content without any markdown or special formatting symbols. Focus on creating compelling, detailed, and quantifiable achievements that demonstrate clear value and align with the job requirements.`;
 
-        console.log("🚀 Calling Gemini API (REST)...");
-<<<<<<< HEAD
-        const apiKey = process.env.GEMINI_API_KEY;
-        const response = await fetch(
-            `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${apiKey}`,
-            {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    contents: [{ parts: [{ text: prompt }] }],
-                    generationConfig: {
-                        temperature: 0,
-                        topP: 0.1,
-                        topK: 1
-                    },
-                    safetySettings: [
-                        { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
-                        { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
-                        { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" },
-                        { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" }
-                    ]
-                })
-            }
-        );
-
-        if (!response.ok) {
-            const errorText = await response.text();
-            console.error("❌ Gemini API Error:", response.status, errorText);
-            throw new Error(`Gemini API Error: ${errorText}`);
-=======
-
-        // MOCK MODE: If USE_MOCK_GEMINI=true in .env.local, skip external call
-        // and return a deterministic dummy analysis. Useful for local testing
-        // when the real Gemini key/endpoint is unavailable or rate-limited.
-        if (process.env.USE_MOCK_GEMINI === "true") {
-            console.log("⚠️ Using MOCK GEMINI response (USE_MOCK_GEMINI=true)");
-            const text = JSON.stringify({
-                matchScore: 82,
-                resumeSummary: "Experienced engineer with strong DevOps and cloud skills, focused on CI/CD and automation.",
-                missingKeywords: ["Kubernetes", "Terraform"],
-                insightsAndRecommendations: ["Add more quantifiable metrics.", "Highlight cloud provider experience."],
-                replacements: {
-                    summary_bullet_1: "Experienced DevOps engineer with 6+ years delivering scalable infrastructure and CI/CD automation.",
-                    exp1_bullet_1: "Implemented CI/CD pipelines using GitLab CI to reduce deployment time by 40%.",
-                    exp1_bullet_2: "Automated infrastructure provisioning with Terraform, improving reliability and repeatability."
-                }
-            });
-
-            let analysis: any;
-            try {
-                analysis = JSON.parse(text);
-                console.log("✅ MOCK JSON parsed successfully");
-            } catch (err) {
-                console.error("❌ MOCK JSON Parse Failed:", err);
-                analysis = { matchScore: 0, replacements: {} };
-            }
-
-            // Apply templating and logging flow below using `analysis` variable.
-            // (We reuse the code path after parsing Gemini response.)
-
-            // 📝 APPLY CHANGES TO DOCX (reuse same logic below)
-            let outputBuffer = buffer;
-            try {
-                const zip = new PizZip(buffer);
-                const doc = new Docxtemplater(zip, {
-                    paragraphLoop: true,
-                    linebreaks: true,
-                    delimiters: { start: '{{', end: '}}' },
-                });
-
-                doc.render(analysis.replacements || {});
-
-                outputBuffer = Buffer.from(doc.getZip().generate({
-                    type: "nodebuffer",
-                    compression: "DEFLATE",
-                }) as any);
-                console.log("✅ DOCX Updated Successfully (MOCK)");
-            } catch (docxError: any) {
-                console.error("❌ Docxtemplater Error (MOCK):", docxError);
-            }
-
-            // Skip all downstream external calls and return success immediately
-            const sanitize = (str: string) => str.replace(/[^a-zA-Z0-9]/g, '_');
-            const userName = "User";
-            const customFileName = `${sanitize(userName)}_${sanitize(companyName)}_${sanitize(jobTitle)}_resume.docx`;
-
-            return NextResponse.json({
-                success: true,
-                analysis,
-                fileData: outputBuffer.toString("base64"),
-                fileName: customFileName,
-            });
->>>>>>> df19a32
-        }
-
-        // Call Gemini REST API - Using 'gemini-1.5-flash' (Stable & Fast)
-        // If you get 503 Overloaded, PLEASE RETRY. It is temporary server load.
+        // Call Gemini REST API - Using 'gemini-2.5-flash' (Stable & Fast)
         const apiKey = process.env.GEMINI_API_KEY;
         if (!apiKey) {
             console.error("❌ Missing GEMINI_API_KEY");
@@ -245,7 +149,6 @@ Remember: Write natural, professional content without any markdown or special fo
         }
 
         // Use Google Generative AI SDK
-        const genAI = new GoogleGenerativeAI(apiKey);
         const model = genAI.getGenerativeModel({
             model: "gemini-2.5-flash",
             generationConfig: {
@@ -277,11 +180,8 @@ Remember: Write natural, professional content without any markdown or special fo
             console.log("✅ JSON parsed successfully");
         } catch (err) {
             console.error("❌ JSON Parse Failed:", err);
-<<<<<<< HEAD
-=======
             console.log("Raw Response:", text);
             // Fallback
->>>>>>> df19a32
             analysis = {
                 matchScore: 0,
                 replacements: {}
@@ -354,7 +254,6 @@ Remember: Write natural, professional content without any markdown or special fo
                         isNewDay = lastDateMidnight < today;
                     }
 
-<<<<<<< HEAD
                     if (isNewDay) {
                         await prisma.user.update({
                             where: { id: userId },
@@ -365,40 +264,24 @@ Remember: Write natural, professional content without any markdown or special fo
                         });
                     }
 
-                    // Daily limit check
+                    // 🛑 DAILY LIMIT CHECK (50 resumes per day)
+                    const DAILY_LIMIT = 50;
                     const currentDailyCount = isNewDay ? 0 : user.dailyResumeCount;
-                    if (currentDailyCount >= user.dailyResumeLimit) {
-                        return NextResponse.json({
-                            error: `Daily limit reached! You can generate up to ${user.dailyResumeLimit} resumes per day. Try again tomorrow.`
-                        }, { status: 403 });
+                    if (currentDailyCount >= DAILY_LIMIT) {
+                        return NextResponse.json(
+                            { error: `Daily limit reached! You can generate up to ${DAILY_LIMIT} resumes per day. Try again tomorrow.` },
+                            { status: 403 }
+                        );
                     }
 
-                    // Monthly limit check
-                    const LIMIT = user.plan === "PRO" ? 70 : 5;
+                    // 🛑 MONTHLY LIMIT CHECK
+                    const LIMIT = user.plan === "PRO" ? 1500 : 5;
                     if (user.creditsUsed >= LIMIT) {
-                        return NextResponse.json({
-                            error: `You have reached your limit of ${LIMIT} resumes. Please upgrade to Pro.`
-                        }, { status: 403 });
+                        return NextResponse.json(
+                            { error: `You have reached your limit of ${LIMIT} resumes. Please upgrade to Pro.` },
+                            { status: 403 }
+                        );
                     }
-=======
-                // 🛑 DAILY LIMIT CHECK (50 resumes per day)
-                const DAILY_LIMIT = 50;
-                const currentDailyCount = isNewDay ? 0 : user.dailyResumeCount;
-                if (currentDailyCount >= DAILY_LIMIT) {
-                    return NextResponse.json(
-                        { error: `Daily limit reached! You can generate up to ${DAILY_LIMIT} resumes per day. Try again tomorrow.` },
-                        { status: 403 }
-                    );
-                }
-
-                // 🛑 MONTHLY LIMIT CHECK
-                const LIMIT = user.plan === "PRO" ? 1500 : 5;
-                if (user.creditsUsed >= LIMIT) {
-                    return NextResponse.json(
-                        { error: `You have reached your limit of ${LIMIT} resumes. Please upgrade to Pro.` },
-                        { status: 403 }
-                    );
->>>>>>> df19a32
                 }
             }
         } catch (authError: any) {
