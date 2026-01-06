@@ -236,17 +236,24 @@ Remember: Write natural, professional content without any markdown or special fo
 
                 // Check if it's a new day - Reset daily count
                 const today = new Date();
-                today.setHours(0, 0, 0, 0);
+                today.setHours(0, 0, 0, 0); // Start of today (midnight)
 
                 const lastDate = user.lastResumeDate ? new Date(user.lastResumeDate) : null;
-                const isNewDay = !lastDate || lastDate < today;
+                let isNewDay = !lastDate;
+
+                if (lastDate) {
+                    // Normalize lastDate to midnight for comparison
+                    const lastDateMidnight = new Date(lastDate);
+                    lastDateMidnight.setHours(0, 0, 0, 0);
+                    isNewDay = lastDateMidnight < today;
+                }
 
                 if (isNewDay) {
                     await prisma.user.update({
                         where: { id: userId },
                         data: {
                             dailyResumeCount: 0,
-                            lastResumeDate: new Date()
+                            lastResumeDate: today // Use normalized midnight date
                         }
                     });
                 }
@@ -285,12 +292,16 @@ Remember: Write natural, professional content without any markdown or special fo
             });
 
             if (userId) {
+                // Use the same normalized midnight date
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+
                 await prisma.user.update({
                     where: { id: userId },
                     data: {
                         creditsUsed: { increment: 1 },
                         dailyResumeCount: { increment: 1 },
-                        lastResumeDate: new Date()
+                        lastResumeDate: today // Use normalized midnight date, not new Date()
                     }
                 });
             }
