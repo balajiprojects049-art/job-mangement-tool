@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { Download, Eye, Calendar, Briefcase, FileText, Search, X, Filter, Star } from "lucide-react";
+import { Download, Eye, Calendar, Briefcase, FileText, Search, X, Filter, Star, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 interface Resume {
@@ -21,6 +21,31 @@ interface ResumesClientProps {
 export function ResumesClient({ resumes: initialResumes }: ResumesClientProps) {
     const router = useRouter();
     const [resumes, setResumes] = useState(initialResumes);
+    // ... (other state variables remain same)
+
+    // ... (getScoreBadge and toggleFavorite remain same)
+
+    const handleDelete = async (resumeId: string) => {
+        if (!confirm("Are you sure you want to delete this resume? This action cannot be undone.")) {
+            return;
+        }
+
+        try {
+            const response = await fetch(`/api/resumes/${resumeId}`, {
+                method: "DELETE",
+            });
+
+            if (response.ok) {
+                setResumes(resumes.filter(r => r.id !== resumeId));
+                router.refresh(); // Refresh server state as well
+            } else {
+                alert("Failed to delete resume");
+            }
+        } catch (error) {
+            console.error("Delete error:", error);
+            alert("An error occurred while deleting");
+        }
+    };
     const [searchQuery, setSearchQuery] = useState("");
     const [filterScore, setFilterScore] = useState<"all" | "high" | "medium" | "low">("all");
     const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
@@ -295,34 +320,46 @@ export function ResumesClient({ resumes: initialResumes }: ResumesClientProps) {
                                             key={resume.id}
                                             className="card p-6 card-hover border-l-4 border-l-primary/50 hover:border-l-primary transition-all relative group"
                                         >
-                                            {/* Favorite Star */}
-                                            <button
-                                                onClick={() => toggleFavorite(resume.id, resume.isFavorite)}
-                                                disabled={togglingFavorite === resume.id}
-                                                className="absolute top-4 right-4 p-2 hover:bg-muted rounded-lg transition-colors"
-                                            >
-                                                <Star
-                                                    className={`w-5 h-5 ${resume.isFavorite
-                                                        ? 'fill-yellow-400 text-yellow-400'
-                                                        : 'text-muted-foreground hover:text-yellow-400'
-                                                        } ${togglingFavorite === resume.id ? 'animate-spin' : ''}`}
-                                                />
-                                            </button>
+                                            {/* Top Actions: Favorite & Delete */}
+                                            <div className="absolute top-4 right-4 flex items-center gap-2">
+                                                <button
+                                                    onClick={() => toggleFavorite(resume.id, resume.isFavorite)}
+                                                    disabled={togglingFavorite === resume.id}
+                                                    className="p-2 hover:bg-muted rounded-lg transition-colors"
+                                                    title={resume.isFavorite ? "Remove from favorites" : "Add to favorites"}
+                                                >
+                                                    <Star
+                                                        className={`w-5 h-5 ${resume.isFavorite
+                                                            ? 'fill-yellow-400 text-yellow-400'
+                                                            : 'text-muted-foreground hover:text-yellow-400'
+                                                            } ${togglingFavorite === resume.id ? 'animate-spin' : ''}`}
+                                                    />
+                                                </button>
+                                                <button
+                                                    onClick={() => handleDelete(resume.id)}
+                                                    className="p-2 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors text-muted-foreground hover:text-red-500"
+                                                    title="Delete Resume"
+                                                >
+                                                    <Trash2 className="w-5 h-5" />
+                                                </button>
+                                            </div>
 
                                             {/* Job Title */}
-                                            <h3 className="text-xl font-bold text-foreground mb-2 pr-8">
+                                            <h3 className="text-xl font-bold text-foreground mb-2 pr-16 truncate" title={resume.jobTitle || "Untitled Position"}>
                                                 {resume.jobTitle || "Untitled Position"}
                                             </h3>
 
                                             {/* Company */}
                                             <div className="flex items-center gap-2 text-muted-foreground mb-3">
-                                                <Briefcase className="w-4 h-4" />
-                                                <span className="font-medium">{resume.companyName || "Unknown Company"}</span>
+                                                <Briefcase className="w-4 h-4 flex-shrink-0" />
+                                                <span className="font-medium truncate" title={resume.companyName || "Unknown Company"}>
+                                                    {resume.companyName || "Unknown Company"}
+                                                </span>
                                             </div>
 
                                             {/* Date */}
                                             <div className="flex items-center gap-2 text-sm text-muted-foreground mb-4">
-                                                <Calendar className="w-4 h-4" />
+                                                <Calendar className="w-4 h-4 flex-shrink-0" />
                                                 <span>{new Date(resume.createdAt).toLocaleDateString()}</span>
                                             </div>
 
@@ -345,6 +382,7 @@ export function ResumesClient({ resumes: initialResumes }: ResumesClientProps) {
                                                 <button
                                                     onClick={() => viewResume(resume.id)}
                                                     className="btn btn-ghost px-4"
+                                                    title="View Details"
                                                 >
                                                     <Eye className="w-4 h-4" />
                                                 </button>
