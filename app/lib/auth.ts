@@ -1,6 +1,7 @@
 import { getServerSession } from "next-auth";
 import { cookies } from "next/headers";
 import { authOptions } from "@/app/lib/auth-options";
+import { prisma } from "@/app/lib/prisma";
 
 /**
  * Get the current user's ID from either:
@@ -10,33 +11,43 @@ import { authOptions } from "@/app/lib/auth-options";
  * Returns the user ID (string) or null if no session exists
  */
 export async function getUserId(): Promise<string | null> {
-    // Check custom session cookie first (email/password login)
-    const cookieStore = cookies();
-    const customSession = cookieStore.get("user_session")?.value;
+    try {
+        // Check custom session cookie first (email/password login)
+        const cookieStore = cookies();
+        const customSession = cookieStore.get("user_session")?.value;
 
-    if (customSession) {
-        return customSession;
-    }
-
-    // Check NextAuth session (Google/OAuth login)
-    // ⚠️ IMPORTANT: Must pass authOptions for this to work in Route Handlers!
-    const nextAuthSession = await getServerSession(authOptions);
-    if (nextAuthSession?.user?.email) {
-        // OAuth users: we need to look up their actual ID from the database
-        // (since NextAuth only stores email in the default session)
-        const { prisma } = await import("@/app/lib/prisma");
-        const user = await prisma.user.findUnique({
-            where: { email: nextAuthSession.user.email },
-            select: { id: true }
-        });
-
-        if (user) {
-            return user.id;
+        if (customSession) {
+            console.log("✅ Found custom session cookie");
+            return customSession;
         }
-    }
 
-    // No session found
-    return null;
+        // Check NextAuth session (Google/OAuth login)
+        const nextAuthSession = await getServerSession(authOptions);
+
+        if (nextAuthSession?.user?.email) {
+            console.log("✅ Found NextAuth session for:", nextAuthSession.user.email);
+
+            // Look up user by email to get their actual database ID
+            const user = await prisma.user.findUnique({
+                where: { email: nextAuthSession.user.email },
+                select: { id: true }
+            });
+
+            if (user) {
+                console.log("✅ Found user in database with ID:", user.id);
+                return user.id;
+            } else {
+                console.warn("⚠️ User email from session not found in database:", nextAuthSession.user.email);
+                return null;
+            }
+        }
+
+        console.log("ℹ️ No session found");
+        return null;
+    } catch (error) {
+        console.error("❌ Error in getUserId:", error);
+        return null;
+    }
 }
 
 /**
