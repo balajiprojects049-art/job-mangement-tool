@@ -214,66 +214,74 @@ Remember: Write natural, professional content without any markdown or special fo
         let userName = "User";
         let userId: string | null = null;
 
-        const sessionUserId = await getUserId();
+        try {
+            const sessionUserId = await getUserId();
+            console.log("📍 getUserId result:", sessionUserId ? "Found" : "Not found");
 
-        if (sessionUserId) {
-            const user = await prisma.user.findUnique({
-                where: { id: sessionUserId }
-            });
+            if (sessionUserId) {
+                const user = await prisma.user.findUnique({
+                    where: { id: sessionUserId }
+                });
+                console.log("📍 User lookup result:", user ? `Found: ${user.email}` : "Not found");
 
-            if (user) {
-                userEmail = user.email;
-                userName = user.name || user.email.split('@')[0];
-                userId = user.id;
+                if (user) {
+                    userEmail = user.email;
+                    userName = user.name || user.email.split('@')[0];
+                    userId = user.id;
 
-                // Check full access
-                if (!(user as any).hasFullAccess) {
-                    return NextResponse.json({
-                        error: "Access Restricted",
-                        message: "Your account is approved but doesn't have resume generation access yet. Please send your resume to our WhatsApp: +1 (409) 919-7989. After reviewing your resume, admin will grant you plan access to use all features."
-                    }, { status: 403 });
-                }
+                    // Check full access
+                    if (!(user as any).hasFullAccess) {
+                        return NextResponse.json({
+                            error: "Access Restricted",
+                            message: "Your account is approved but doesn't have resume generation access yet. Please send your resume to our WhatsApp: +1 (409) 919-7989. After reviewing your resume, admin will grant you plan access to use all features."
+                        }, { status: 403 });
+                    }
 
-                // Check if it's a new day - Reset daily count
-                const today = new Date();
-                today.setHours(0, 0, 0, 0); // Start of today (midnight)
+                    // Check if it's a new day - Reset daily count
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0); // Start of today (midnight)
 
-                const lastDate = user.lastResumeDate ? new Date(user.lastResumeDate) : null;
-                let isNewDay = !lastDate;
+                    const lastDate = user.lastResumeDate ? new Date(user.lastResumeDate) : null;
+                    let isNewDay = !lastDate;
 
-                if (lastDate) {
-                    // Normalize lastDate to midnight for comparison
-                    const lastDateMidnight = new Date(lastDate);
-                    lastDateMidnight.setHours(0, 0, 0, 0);
-                    isNewDay = lastDateMidnight < today;
-                }
+                    if (lastDate) {
+                        // Normalize lastDate to midnight for comparison
+                        const lastDateMidnight = new Date(lastDate);
+                        lastDateMidnight.setHours(0, 0, 0, 0);
+                        isNewDay = lastDateMidnight < today;
+                    }
 
-                if (isNewDay) {
-                    await prisma.user.update({
-                        where: { id: userId },
-                        data: {
-                            dailyResumeCount: 0,
-                            lastResumeDate: today // Use normalized midnight date
-                        }
-                    });
-                }
+                    if (isNewDay) {
+                        await prisma.user.update({
+                            where: { id: userId },
+                            data: {
+                                dailyResumeCount: 0,
+                                lastResumeDate: today // Use normalized midnight date
+                            }
+                        });
+                    }
 
-                // Daily limit check
-                const currentDailyCount = isNewDay ? 0 : user.dailyResumeCount;
-                if (currentDailyCount >= user.dailyResumeLimit) {
-                    return NextResponse.json({
-                        error: `Daily limit reached! You can generate up to ${user.dailyResumeLimit} resumes per day. Try again tomorrow.`
-                    }, { status: 403 });
-                }
+                    // Daily limit check
+                    const currentDailyCount = isNewDay ? 0 : user.dailyResumeCount;
+                    if (currentDailyCount >= user.dailyResumeLimit) {
+                        return NextResponse.json({
+                            error: `Daily limit reached! You can generate up to ${user.dailyResumeLimit} resumes per day. Try again tomorrow.`
+                        }, { status: 403 });
+                    }
 
-                // Monthly limit check
-                const LIMIT = user.plan === "PRO" ? 70 : 5;
-                if (user.creditsUsed >= LIMIT) {
-                    return NextResponse.json({
-                        error: `You have reached your limit of ${LIMIT} resumes. Please upgrade to Pro.`
-                    }, { status: 403 });
+                    // Monthly limit check
+                    const LIMIT = user.plan === "PRO" ? 70 : 5;
+                    if (user.creditsUsed >= LIMIT) {
+                        return NextResponse.json({
+                            error: `You have reached your limit of ${LIMIT} resumes. Please upgrade to Pro.`
+                        }, { status: 403 });
+                    }
                 }
             }
+        } catch (authError: any) {
+            console.error("⚠️ Auth/User Fetch Error:", authError);
+            console.error("Stack:", authError.stack);
+            // Continue processing as anonymous user if auth fails
         }
 
         // Database logging
