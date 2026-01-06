@@ -21,36 +21,15 @@ interface ResumesClientProps {
 export function ResumesClient({ resumes: initialResumes }: ResumesClientProps) {
     const router = useRouter();
     const [resumes, setResumes] = useState(initialResumes);
-    // ... (other state variables remain same)
-
-    // ... (getScoreBadge and toggleFavorite remain same)
-
-    const handleDelete = async (resumeId: string) => {
-        if (!confirm("Are you sure you want to delete this resume? This action cannot be undone.")) {
-            return;
-        }
-
-        try {
-            const response = await fetch(`/api/resumes/${resumeId}`, {
-                method: "DELETE",
-            });
-
-            if (response.ok) {
-                setResumes(resumes.filter(r => r.id !== resumeId));
-                router.refresh(); // Refresh server state as well
-            } else {
-                alert("Failed to delete resume");
-            }
-        } catch (error) {
-            console.error("Delete error:", error);
-            alert("An error occurred while deleting");
-        }
-    };
     const [searchQuery, setSearchQuery] = useState("");
     const [filterScore, setFilterScore] = useState<"all" | "high" | "medium" | "low">("all");
     const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
     const [togglingFavorite, setTogglingFavorite] = useState<string | null>(null);
     const [sortBy, setSortBy] = useState<"date" | "score" | "company">("date");
+
+    // Delete Modal State
+    const [deleteId, setDeleteId] = useState<string | null>(null);
+    const [isDeleting, setIsDeleting] = useState(false);
 
     const getScoreBadge = (score: number) => {
         if (score >= 90) return "status-badge success";
@@ -79,6 +58,34 @@ export function ResumesClient({ resumes: initialResumes }: ResumesClientProps) {
             console.error("Failed to toggle favorite:", error);
         } finally {
             setTogglingFavorite(null);
+        }
+    };
+
+    const confirmDelete = (id: string) => {
+        setDeleteId(id);
+    };
+
+    const handleDelete = async () => {
+        if (!deleteId) return;
+        setIsDeleting(true);
+
+        try {
+            const response = await fetch(`/api/resumes/${deleteId}`, {
+                method: "DELETE",
+            });
+
+            if (response.ok) {
+                setResumes(resumes.filter(r => r.id !== deleteId));
+                router.refresh();
+                setDeleteId(null);
+            } else {
+                alert("Failed to delete resume");
+            }
+        } catch (error) {
+            console.error("Delete error:", error);
+            alert("An error occurred while deleting");
+        } finally {
+            setIsDeleting(false);
         }
     };
 
@@ -336,7 +343,7 @@ export function ResumesClient({ resumes: initialResumes }: ResumesClientProps) {
                                                     />
                                                 </button>
                                                 <button
-                                                    onClick={() => handleDelete(resume.id)}
+                                                    onClick={() => confirmDelete(resume.id)}
                                                     className="p-2 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors text-muted-foreground hover:text-red-500"
                                                     title="Delete Resume"
                                                 >
@@ -395,6 +402,50 @@ export function ResumesClient({ resumes: initialResumes }: ResumesClientProps) {
                     </div>
                 )}
             </div>
+
+            {/* Custom Delete Confirmation Modal */}
+            {deleteId && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
+                    <div className="bg-card p-6 rounded-xl shadow-2xl border border-border max-w-md w-full mx-4 animate-in zoom-in-95 duration-200">
+                        <div className="flex flex-col items-center text-center p-2">
+                            <div className="w-12 h-12 bg-red-100 dark:bg-red-900/20 rounded-full flex items-center justify-center mb-4 text-red-600 dark:text-red-500">
+                                <Trash2 className="w-6 h-6" />
+                            </div>
+                            <h3 className="text-xl font-bold text-foreground mb-2">Delete Resume?</h3>
+                            <p className="text-muted-foreground mb-6">
+                                Are you sure you want to delete this resume? This action cannot be undone and you won't get your credit back.
+                            </p>
+
+                            <div className="flex w-full gap-3">
+                                <button
+                                    onClick={() => setDeleteId(null)}
+                                    disabled={isDeleting}
+                                    className="btn btn-ghost flex-1 border border-border"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={handleDelete}
+                                    disabled={isDeleting}
+                                    className="btn bg-red-600 hover:bg-red-700 text-white flex-1 flex items-center justify-center gap-2"
+                                >
+                                    {isDeleting ? (
+                                        <>
+                                            <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></span>
+                                            Deleting...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Trash2 className="w-4 h-4" />
+                                            Delete
+                                        </>
+                                    )}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
