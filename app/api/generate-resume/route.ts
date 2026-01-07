@@ -79,12 +79,14 @@ REQUIRED JSON OUTPUT FORMAT:
 Respond ONLY with valid JSON.`;
 
         // Direct REST API Fallback Implementation
-        // UPDATED: Using only models confirmed to be available for this API Key
+        // UPDATED: Prioritizing 'latest' stable aliases to avoid 2.x experimental rate limits
         const models = [
-            "gemini-2.5-flash",
+            "gemini-flash-latest",       // Stable 1.5 Flash alias (Available)
+            "gemini-flash-lite-latest",  // Lightest/Fastest 1.5 alias (Available)
+            "gemini-2.0-flash-lite-preview-02-05", // New Lite model
+            "gemini-2.5-flash",          // User preferred
             "gemini-2.0-flash",
-            "gemini-2.0-flash-exp",
-            "gemini-2.0-flash-001"
+            "gemini-exp-1206"
         ];
 
         let analysis: any = null;
