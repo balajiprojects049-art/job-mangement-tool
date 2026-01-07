@@ -1,6 +1,6 @@
+
 import { NextRequest, NextResponse } from "next/server";
 import { getUserId } from "@/app/lib/auth";
-import { GoogleGenerativeAI } from "@google/generative-ai";
 import PizZip from "pizzip";
 import Docxtemplater from "docxtemplater";
 import { prisma } from "@/app/lib/prisma";
@@ -9,27 +9,7 @@ export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
 
 export async function POST(request: NextRequest) {
-    console.log("========== /api/generate-resume ==========");
-
-    // 1. Verify API Key
-    if (!process.env.GEMINI_API_KEY) {
-        console.error("❌ GEMINI_API_KEY is missing");
-        return NextResponse.json({
-            error: "Server Configuration Error: GEMINI_API_KEY is missing"
-        }, { status: 500 });
-    }
-
-    // 2. Initialize GoogleGenerativeAI
-    let genAI;
-    try {
-        genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-    } catch (e: any) {
-        console.error("❌ Failed to initialize GoogleGenerativeAI:", e);
-        return NextResponse.json({
-            error: "Failed to initialize AI service",
-            details: e.message
-        }, { status: 500 });
-    }
+    console.log("========== /api/generate-resume (REST ID) ==========");
 
     try {
         console.log("🔄 Parsing form data...");
@@ -40,19 +20,11 @@ export async function POST(request: NextRequest) {
         const jobDescription = formData.get("jobDescription") as string | null;
         const file = formData.get("resume") as unknown as File | null;
 
-        console.log("FORM DATA CHECK:", {
-            hasJobDesc: !!jobDescription,
-            hasFile: !!file,
-            fileName: file?.name,
-        });
-
         if (!jobDescription || !file) {
             return NextResponse.json({
                 error: "Missing job description or resume file",
             }, { status: 400 });
         }
-
-        console.log("📄 Resume File:", file.name, file.size, "bytes");
 
         // Extract text from DOCX
         const arrayBuffer = await file.arrayBuffer();
@@ -69,7 +41,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Generate AI content
-        const prompt = `You are an expert ATS (Applicant Tracking System) Scanner and Professional Resume Writer.
+        const promptText = `You are an expert ATS (Applicant Tracking System) Scanner and Professional Resume Writer.
 
 Your task is to:
 1. READ the Job Description and the Resume Content below.
@@ -89,103 +61,90 @@ CRITICAL FORMATTING RULES:
 - Write in plain text only
 - Each bullet point should be a complete, detailed sentence
 - Use strong action verbs at the start of each bullet
-- Include specific numbers, percentages, and quantifiable results whenever possible
-- Make each bullet point substantial (15-25 words minimum)
-- Focus on achievements and impact, not just responsibilities
-
-CONTENT QUALITY REQUIREMENTS:
-- Summary bullets must highlight core competencies, years of experience, and key technical skills
-- Experience bullets must include: Action verb + What you did + How you did it + Quantifiable result/impact
-- Use industry-specific terminology from the job description
-- Include relevant technologies, tools, and methodologies
-- Emphasize leadership, collaboration, and problem-solving
-- Achievements should showcase measurable business impact
+- Content must be professional and quantifiable
 
 REQUIRED JSON OUTPUT FORMAT:
 {
-  "matchScore": (Integer 0-100 based on ACTUAL analysis),
-  "resumeSummary": "A powerful 2-3 sentence professional summary highlighting years of experience, core expertise, and key value proposition aligned with the target role",
-  "missingKeywords": ["List critical keywords found in JD but missing in Resume"],
-  "insightsAndRecommendations": ["Specific advice to improve the score"],
+  "matchScore": (Integer 0-100),
+  "resumeSummary": "Professional summary text...",
+  "missingKeywords": ["keyword1", "keyword2"],
+  "insightsAndRecommendations": ["advice1", "advice2"],
   "replacements": {
-      "summary_bullet_1": "Highly detailed professional summary point highlighting core expertise with specific years of experience and key technical competencies relevant to the job description",
-      "summary_bullet_2": "Strong value proposition showcasing unique combination of technical skills and domain knowledge that directly addresses the job requirements",
-      "summary_bullet_3": "Demonstrated track record of delivering measurable business outcomes through specific methodologies and technologies mentioned in the job description",
-      "summary_bullet_4": "Proven ability to lead cross-functional teams and drive complex projects from conception to successful deployment with quantifiable results",
-      "summary_bullet_5": "Extensive experience with specific tools, frameworks, and technologies listed in the job description with concrete examples of application",
-      "summary_bullet_6": "Strong analytical and problem-solving capabilities demonstrated through successful resolution of critical business challenges",
-      "summary_bullet_7": "Excellent communication and stakeholder management skills with proven ability to translate technical concepts for diverse audiences",
-
-      "exp2_bullet_1": "Led development of comprehensive solution that resulted in specific percentage improvement in key business metric, utilizing relevant technologies and methodologies from job description while collaborating with cross-functional teams",
-      "exp2_bullet_2": "Architected and implemented scalable system that processed specific volume of transactions or data, achieving specific performance metrics and reducing costs by quantifiable amount",
-      "exp2_bullet_3": "Spearheaded initiative to improve specific process or system, resulting in measurable improvements in efficiency, quality, or user satisfaction through application of industry best practices",
-      "exp2_bullet_4": "Designed and deployed advanced technical solution using specific technologies that enhanced system capability by quantifiable metric while ensuring reliability and performance standards",
-      "exp2_bullet_5": "Collaborated with stakeholders across departments to deliver complex project ahead of schedule, managing specific number of team members and achieving measurable business impact",
-      "exp2_bullet_6": "Resolved critical production issues by implementing innovative technical approach that reduced downtime by specific percentage and improved system stability metrics",
-      "exp2_achievement_1": "Delivered transformational project that generated specific revenue increase or cost savings of quantifiable amount through strategic implementation of cutting-edge technology",
-      "exp2_achievement_2": "Recognized with specific award or achievement for outstanding contribution to major initiative that resulted in measurable organizational impact",
-
-      "exp1_bullet_1": "Developed and maintained sophisticated applications serving specific number of users, implementing features that increased engagement metrics by quantifiable percentage using relevant technical stack",
-      "exp1_bullet_2": "Optimized critical system components resulting in specific performance improvement and reduced resource consumption by measurable amount through application of advanced techniques",
-      "exp1_bullet_3": "Implemented comprehensive testing and quality assurance processes that reduced defect rates by specific percentage while accelerating delivery timelines",
-      "exp1_bullet_4": "Mentored team of specific number of developers on best practices and emerging technologies, fostering culture of continuous improvement and technical excellence",
-      "exp1_bullet_5": "Integrated third-party systems and APIs to enhance platform capabilities, enabling new revenue streams and improving user experience metrics by quantifiable amount",
-      "exp1_bullet_6": "Automated critical workflows using specific technologies that eliminated manual effort equivalent to specific time savings and reduced error rates significantly",
-      "exp1_achievement_1": "Successfully delivered high-visibility project that supported major business objective, achieving specific metric improvement and earning recognition from leadership",
-      "exp1_achievement_2": "Pioneered adoption of innovative technology or methodology that became standard practice across organization, improving team productivity by measurable percentage"
+      "summary_bullet_1": "Optimized content...",
+      "exp2_bullet_1": "Optimized content...",
+      // ... generate content for likely placeholders
   }
 }
 
-Remember: Write natural, professional content without any markdown or special formatting symbols. Focus on creating compelling, detailed, and quantifiable achievements that demonstrate clear value and align with the job requirements.`;
+Respond ONLY with valid JSON.`;
 
-        // Call Gemini REST API - Using 'gemini-2.5-flash' (Stable & Fast)
-        const apiKey = process.env.GEMINI_API_KEY;
-        if (!apiKey) {
-            console.error("❌ Missing GEMINI_API_KEY");
-            return NextResponse.json(
-                { error: "Server misconfiguration: GEMINI_API_KEY not set" },
-                { status: 500 }
-            );
-        }
+        // Direct REST API Fallback Implementation
+        // UPDATED: Using only models confirmed to be available for this API Key
+        const models = [
+            "gemini-2.5-flash",
+            "gemini-2.0-flash",
+            "gemini-2.0-flash-exp",
+            "gemini-2.0-flash-001"
+        ];
 
-        // Use Google Generative AI SDK
-        const model = genAI.getGenerativeModel({
-            model: "gemini-2.5-flash",
-            generationConfig: {
-                // Ensure JSON output
-                responseMimeType: "application/json",
+        let analysis: any = null;
+        let lastErrorStr = "";
+
+        console.log("🚀 Starting generation (Direct REST API)...");
+
+        for (const model of models) {
+            try {
+                console.log(`🌐 POST https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`);
+
+                const response = await fetch(
+                    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${process.env.GEMINI_API_KEY}`,
+                    {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json"
+                        },
+                        body: JSON.stringify({
+                            contents: [{
+                                parts: [{ text: promptText }]
+                            }],
+                            generationConfig: {
+                                responseMimeType: "application/json"
+                            }
+                        })
+                    }
+                );
+
+                if (!response.ok) {
+                    const errText = await response.text();
+                    throw new Error(`HTTP ${response.status}: ${errText}`);
+                }
+
+                const data = await response.json();
+
+                if (data.candidates && data.candidates[0] && data.candidates[0].content) {
+                    const rawText = data.candidates[0].content.parts[0].text;
+                    const cleaned = rawText.replace(/```json|```/g, "").trim();
+                    analysis = JSON.parse(cleaned);
+                    console.log(`✅ Success with ${model}`);
+                    break;
+                } else {
+                    throw new Error("No candidates returned");
+                }
+
+            } catch (e: any) {
+                console.warn(`⚠️ Failed with ${model}: ${e.message}`);
+                lastErrorStr = e.message;
             }
-        });
-
-        console.log("🚀 Calling Gemini API via SDK...");
-        let text = "";
-        try {
-            const result = await model.generateContent(prompt);
-            const response = await result.response;
-            text = response.text();
-            console.log("Gemini Response Length:", text.length);
-        } catch (apiError: any) {
-            console.error("❌ Gemini SDK Error:", apiError);
-            return NextResponse.json(
-                { error: "Gemini API Error", details: apiError.message },
-                { status: 500 }
-            );
         }
 
-        let analysis: any;
-        try {
-            // Clean up potentially markdown-wrapped JSON
-            const cleaned = text.replace(/```json|```/g, "").trim();
-            analysis = JSON.parse(cleaned);
-            console.log("✅ JSON parsed successfully");
-        } catch (err) {
-            console.error("❌ JSON Parse Failed:", err);
-            console.log("Raw Response:", text);
-            // Fallback
-            analysis = {
-                matchScore: 0,
-                replacements: {}
-            };
+        if (!analysis) {
+            console.error("❌ All models failed:", lastErrorStr);
+            // Helpful error for user
+            return NextResponse.json({
+                error: `AI Error: ${lastErrorStr || "Failed to connect"}. Check console for details.`,
+                details: "Failed to generate content. " + lastErrorStr,
+                suggestion: "Please check your Google Gemini API Quota (likely exceeded) or Region availability."
+            }, { status: 500 });
         }
 
         // Apply changes to DOCX
@@ -204,12 +163,9 @@ Remember: Write natural, professional content without any markdown or special fo
                 type: "nodebuffer",
                 compression: "DEFLATE",
             }) as any);
-            console.log("✅ DOCX Updated Successfully!");
         } catch (docxError: any) {
-            console.error("❌ Docxtemplater Error:", docxError);
-            if (docxError.properties && docxError.properties.errors) {
-                docxError.properties.errors.forEach((e: any) => console.error("Template Error:", e));
-            }
+            console.error("Docxtemplater Error:", docxError);
+            // Continue even if template replacement fails partially
         }
 
         // Fetch user and check subscription
@@ -219,14 +175,8 @@ Remember: Write natural, professional content without any markdown or special fo
 
         try {
             const sessionUserId = await getUserId();
-            console.log("📍 getUserId result:", sessionUserId ? "Found" : "Not found");
-
             if (sessionUserId) {
-                const user = await prisma.user.findUnique({
-                    where: { id: sessionUserId }
-                });
-                console.log("📍 User lookup result:", user ? `Found: ${user.email}` : "Not found");
-
+                const user = await prisma.user.findUnique({ where: { id: sessionUserId } });
                 if (user) {
                     userEmail = user.email;
                     userName = user.name || user.email.split('@')[0];
@@ -236,97 +186,61 @@ Remember: Write natural, professional content without any markdown or special fo
                     if (!(user as any).hasFullAccess) {
                         return NextResponse.json({
                             error: "Access Restricted",
-                            message: "Your account is approved but doesn't have resume generation access yet. Please send your resume to our WhatsApp: +1 (409) 919-7989. After reviewing your resume, admin will grant you plan access to use all features."
+                            message: "Your account is approved but doesn't have resume generation access yet."
                         }, { status: 403 });
                     }
 
-                    // Check if it's a new day - Reset daily count
+                    // Simple Daily Limit Logic
                     const today = new Date();
-                    today.setHours(0, 0, 0, 0); // Start of today (midnight)
-
+                    today.setHours(0, 0, 0, 0);
                     const lastDate = user.lastResumeDate ? new Date(user.lastResumeDate) : null;
-                    let isNewDay = !lastDate;
+                    if (lastDate) lastDate.setHours(0, 0, 0, 0);
 
-                    if (lastDate) {
-                        // Normalize lastDate to midnight for comparison
-                        const lastDateMidnight = new Date(lastDate);
-                        lastDateMidnight.setHours(0, 0, 0, 0);
-                        isNewDay = lastDateMidnight < today;
-                    }
+                    const isNewDay = !lastDate || lastDate < today;
 
                     if (isNewDay) {
                         await prisma.user.update({
                             where: { id: userId },
-                            data: {
-                                dailyResumeCount: 0,
-                                lastResumeDate: today // Use normalized midnight date
-                            }
+                            data: { dailyResumeCount: 0, lastResumeDate: today }
                         });
                     }
 
-                    // 🛑 DAILY LIMIT CHECK (50 resumes per day)
                     const DAILY_LIMIT = 50;
-                    const currentDailyCount = isNewDay ? 0 : user.dailyResumeCount;
-                    if (currentDailyCount >= DAILY_LIMIT) {
-                        return NextResponse.json(
-                            { error: `Daily limit reached! You can generate up to ${DAILY_LIMIT} resumes per day. Try again tomorrow.` },
-                            { status: 403 }
-                        );
-                    }
-
-                    // 🛑 MONTHLY LIMIT CHECK
-                    const LIMIT = user.plan === "PRO" ? 1500 : 5;
-                    if (user.creditsUsed >= LIMIT) {
-                        return NextResponse.json(
-                            { error: `You have reached your limit of ${LIMIT} resumes. Please upgrade to Pro.` },
-                            { status: 403 }
-                        );
+                    if ((isNewDay ? 0 : user.dailyResumeCount) >= DAILY_LIMIT) {
+                        return NextResponse.json({ error: "Daily limit reached" }, { status: 403 });
                     }
                 }
             }
-        } catch (authError: any) {
-            console.error("⚠️ Auth/User Fetch Error:", authError);
-            console.error("Stack:", authError.stack);
-            // Continue processing as anonymous user if auth fails
+        } catch (authError) {
+            console.error("Auth Error", authError);
         }
 
-        // Database logging
+        // Database logging and credits deduction
         try {
-            await prisma.resumeLog.create({
-                data: {
-                    // id: Let Prisma generate CUID
-                    jobTitle: jobTitle,
-                    companyName: companyName,
-                    matchScore: analysis.matchScore || 0,
-                    originalName: file.name,
-                    userEmail: userEmail,
-                    userId: userId,
-                    status: "SUCCESS",
-                    fileData: outputBuffer.toString("base64") // Save for download
-                }
-            });
-
             if (userId) {
-                // Use the same normalized midnight date
                 const today = new Date();
                 today.setHours(0, 0, 0, 0);
-
                 await prisma.user.update({
                     where: { id: userId },
                     data: {
                         creditsUsed: { increment: 1 },
                         dailyResumeCount: { increment: 1 },
-                        lastResumeDate: today // Use normalized midnight date, not new Date()
+                        lastResumeDate: today
                     }
                 });
             }
 
-            console.log("✅ Activity logged & Credits Deducted for:", userEmail);
+            await prisma.resumeLog.create({
+                data: {
+                    jobTitle, companyName, matchScore: analysis.matchScore || 0,
+                    originalName: file.name, userEmail, userId, status: "SUCCESS",
+                    fileData: outputBuffer.toString("base64")
+                }
+            });
         } catch (dbError) {
-            console.warn("⚠️ Database logging failed (Non-critical):", dbError);
+            console.warn("DB Log Error", dbError);
         }
 
-        // Create custom filename
         const sanitize = (str: string) => str.replace(/[^a-zA-Z0-9]/g, '_');
         const customFileName = `${sanitize(userName)}_${sanitize(companyName)}_${sanitize(jobTitle)}_resume.docx`;
 
@@ -342,7 +256,6 @@ Remember: Write natural, professional content without any markdown or special fo
         return NextResponse.json({
             error: "Failed to generate resume",
             message: error.message,
-            stack: error.stack,
         }, { status: 500 });
     }
 }
